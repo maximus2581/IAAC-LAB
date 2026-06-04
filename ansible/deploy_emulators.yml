@@ -1,0 +1,7 @@
+---
+- name: Deploy Storage Emulators
+  hosts: storage_emulators
+  become: true
+  roles:
+    - cci
+    - emulator

@@ -1,0 +1,4 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/sam4h
+sam4h_archive: "sam4hdockerinstaller-v2.4.2.tgz"

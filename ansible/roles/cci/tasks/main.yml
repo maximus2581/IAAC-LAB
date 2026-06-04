@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/cci
+- name: Check if this specific CCI version is already installed
+  ansible.builtin.stat:
+    path: "/var/log/cci_{{ cci_iso }}.lock"
+  register: cci_version_marker
+
+- name: Deploy and Install CCI
+  when: not cci_version_marker.stat.exists
+  block:
+    - name: Upload CCI ISO
+      ansible.builtin.copy:
+        src: "{{ cci_iso }}"
+        dest: /root/
+        mode: '0644'
+
+    - name: Mount CCI ISO
+      ansible.posix.mount:
+        path: /mnt
+        src: "/root/{{ cci_iso }}"
+        fstype: iso9660
+        opts: ro,loop
+        state: ephemeral
+
+    - name: Extract CCI from ISO (with overwrite)
+      ansible.builtin.shell: "cat /mnt/LINUX/X64/RMHORC | cpio -idmu"
+      args:
+        chdir: /
+      changed_when: true
+
+    - name: Run CCI installer
+      ansible.builtin.command: /HORCM/horcminstall.sh
+
+    - name: Create version marker file
+      ansible.builtin.file:
+        path: "/var/log/cci_{{ cci_iso }}.lock"
+        state: touch
+        mode: '0644'
+      changed_when: true
+  always:
+      - name: Unmount CCI ISO
+        ansible.posix.mount:
+          path: /mnt
+          state: unmounted
+        failed_when: false
+        changed_when: true

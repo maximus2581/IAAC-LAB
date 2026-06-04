@@ -1,0 +1,7 @@
+---
+- name: Deploy SAM4H
+  hosts: sam4h
+  become: true
+  roles:
+    - cci
+    - sam4h

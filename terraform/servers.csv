@@ -1,0 +1,4 @@
+server_name,ip_address,subnet_prefix,default_gw,dns_server,role,cpu,ram_mb
+sam4h-srv,192.168.100.100,24,192.168.100.1,8.8.8.8,sam4h,4,8192
+emu-stor-01,192.168.100.101,24,192.168.100.1,8.8.8.8,storage_emulator,2,4096
+emu-stor-02,192.168.100.102,24,192.168.100.1,8.8.8.8,storage_emulator,2,4096

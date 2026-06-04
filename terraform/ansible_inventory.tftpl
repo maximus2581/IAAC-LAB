@@ -1,0 +1,18 @@
+[sam4h]
+%{ for s in servers ~}
+%{ if s.role == "sam4h" ~}
+${s.server_name} ansible_host=${s.ip_address} ansible_user=sysadmin
+%{ endif ~}
+%{ endfor ~}
+
+[storage_emulators]
+%{ for s in servers ~}
+%{ if s.role == "storage_emulator" ~}
+${s.server_name} ansible_host=${s.ip_address} ansible_user=sysadmin
+%{ endif ~}
+%{ endfor ~}
+
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_private_key_file=~/.ssh/id_ed25519
+ansible_python_interpreter=auto_silent

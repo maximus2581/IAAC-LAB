@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/emulator
+emulator_base_archive: "integsim-linux-10.5.3-00.tar.gz"
+emulator_script: "install_sim.sh"
+emulator_sn_mapping:
+  emu-stor-01: "900001"
+  emu-stor-02: "900002"

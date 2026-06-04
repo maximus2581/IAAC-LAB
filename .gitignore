@@ -1,0 +1,64 @@
+# ======================================================================
+# Terraform
+# ======================================================================
+.terraform/
+.terraform.*
+
+*.tfstate
+*.tfstate.backup
+
+*.tfvars
+*.tfvars.json
+
+!*.example.tfvars
+!*example.tfvars.json
+
+crash.log
+crash.*.log
+*.tfplan
+# ======================================================================
+# HashiCorp Packer & Hyper-V
+# ======================================================================
+packer_cache/
+crash.log
+*.vhdx
+*.vhd
+*.iso
+
+
+*.pkrvars.hcl
+!lab_config.pkrvars.hcl
+
+# ======================================================================
+# Proprietary Software & Distributions (DO NOT COMMIT)
+# ======================================================================
+distr/*
+!distr/.gitkeep
+
+ansible/roles/sam4h/files/*
+!ansible/roles/sam4h/files/.gitkeep
+
+ansible/roles/cci/files/*
+!ansible/roles/cci/files/.gitkeep
+
+ansible/roles/emulator/files/*
+!ansible/roles/emulator/files/.gitkeep
+
+# ======================================================================
+# Python & Ansible (uv environment)
+# ======================================================================
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.retry
+.ansible/
+
+# ======================================================================
+# OS & Editor generated files
+# ======================================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

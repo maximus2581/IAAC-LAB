@@ -1,0 +1,64 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/sam4h
+- name: Install podman, podman-docker, podman-plugins
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - podman-docker
+      - podman-plugins
+    state: present
+
+- name: Ensure Podman is enabled and running
+  ansible.builtin.systemd_service:
+    name: podman
+    enabled: true
+    state: started
+
+- name: Check if current SAM4H version is already installed
+  ansible.builtin.stat:
+    path: "/var/log/sam4h_{{ sam4h_archive }}.lock"
+  register: sam4h_version_marker
+
+- name: Deploy or Upgrade SAM4H
+  when: not sam4h_version_marker.stat.exists
+  block:
+    - name: Check if SAM4H is currently installed on the system
+      ansible.builtin.stat:
+        path: /etc/systemd/system/sam4h.service
+      register: sam4h_system_check
+
+    - name: Create clean directory for SAM4H installer
+      ansible.builtin.file:
+        path: /root/sam4h-installer
+        state: directory
+        mode: '0755'
+
+    - name: Extract SAM4H installer (ignoring root folder name)
+      ansible.builtin.unarchive:
+        src: "{{ sam4h_archive }}"
+        dest: /root/sam4h-installer
+        extra_opts:
+          - --strip-components=1
+
+    - name: Run SAM4H Fresh Installation
+      ansible.builtin.command:
+        cmd: "bin/cli-installer.sh -d /opt/hitachi/sam4h --ip {{ ansible_host }} --port 443 --cmddev 0 --start"
+      args:
+        chdir: "/root/sam4h-installer"
+      when: not sam4h_system_check.stat.exists
+      changed_when: true
+
+    - name: Run SAM4H Upgrade
+      ansible.builtin.command:
+        cmd: "./cli-installer.sh -d /opt/hitachi/sam4h --ip {{ ansible_host }} --port 443 --cmddev 0 -u -b /opt/hitachi/sam4h_backups/{{ ansible_date_time.iso8601_basic_short }} --start"
+      args:
+        chdir: "/root/sam4h-installer"
+      when: sam4h_system_check.stat.exists
+      changed_when: true
+
+    - name: Create version marker file for SAM4H
+      ansible.builtin.file:
+        path: "/var/log/sam4h_{{ sam4h_archive }}.lock"
+        state: touch
+        mode: '0644'

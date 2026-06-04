@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/emulator
+- name: Upload emulator archive
+  ansible.builtin.copy:
+    src: "{{ emulator_base_archive }}"
+    dest: /root/
+    mode: '0644'
+- name: Upload Installation emulator_script
+  ansible.builtin.copy:
+    src: "{{ emulator_script }}"
+    dest: /root/
+    mode: '0755'
+- name: Determine replication peer hostname
+  ansible.builtin.set_fact:
+    emulator_peer_name: "{{ groups['storage_emulators'] | difference([inventory_hostname]) | first }}"
+- name: Extract peer IP address
+  ansible.builtin.set_fact:
+    emulator_peer_ip: "{{ hostvars[emulator_peer_name]['ansible_host'] }}"
+# - name: Show the calculated connection string
+#  ansible.builtin.debug:
+#    msg: "I am {{ inventory_hostname }}. My replication peer is {{ emulator_peer_name }} at IP {{ emulator_peer_ip }}"
+- name: Install JDK and dependencies
+  ansible.builtin.dnf:
+    name:
+      - java-21-openjdk-devel
+      - libxcrypt-compat
+    state: present
+- name: Configure JAVA_HOME in user profile
+  ansible.builtin.lineinfile:
+    path: ~/.bash_profile
+    regexp: '^export JAVA_HOME='  # Ищем строку, которая начинается так
+    line: 'export JAVA_HOME=$(dirname $(dirname $(readlink $(readlink $(which java)))))'
+    state: present
+    create: true
+- name: Set Serial Numbers for current host and peer
+  ansible.builtin.set_fact:
+    emulator_my_sn: "{{ emulator_sn_mapping[inventory_hostname] }}"
+    emulator_peer_sn: "{{ emulator_sn_mapping[emulator_peer_name] }}"
+- name: Run IntegSim installer
+  ansible.builtin.command: 
+    cmd: "/root/install_sim.sh {{ emulator_base_archive }} {{ emulator_my_sn }} {{ emulator_peer_ip }} {{ emulator_peer_sn }}"
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-21-openjdk
+  args:
+    chdir: "/root"
+    creates: "/root/integsim/start.sh"
+- name: Ensure IntegSim starts on reboot
+  ansible.builtin.cron:
+    name: "Start IntegSim Emulator"
+    special_time: reboot
+    job: "/root/integsim/start.sh"
+    user: root
+- name: Reboot the server to apply changes and verify autostart
+  ansible.builtin.reboot:
+    msg: "Rebooting via Ansible after IntegSim installation"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 10
+
