@@ -26,9 +26,9 @@ Please follow the deployment phases in strict order:
 Instructions on how to build the base Linux template (Oracle Linux 9) using Packer. Features completely automated provisioning, in-memory Kickstart rendering, SSH key injection, and cloud-init preparation.
 
 ### [Phase 2: Hyper-V VM Deployment](docs/02_hyperv_deployment.md)
-*(Work in progress)* Guide on cloning the Golden Image and provisioning the lab topology (SAM4H node, Emulator nodes).
+Guide on using Terraform to clone the Golden Image via Differencing Disks and dynamically provision the lab topology (SAM4H node, Emulator nodes) with Cloud-Init (NoCloud) configurations.
 
 ### [Phase 3: Ansible Configuration](docs/03_ansible_config.md)
-*(Work in progress)* Details on how to use `uv` for Python environment management and run the Ansible playbooks to deploy Hitachi CCI, IntegSim, and SAM4H idempotently.
+Details on how to execute the Ansible playbooks to deploy Hitachi CCI, Storage Emulators, and SAM4H.
 
 ---
