@@ -32,6 +32,7 @@ emu-stor-01,192.168.100.101,24,192.168.100.1,8.8.8.8,storage_emulator,2,4096
 Create a file named terraform.tfvars in the root of your terraform/ directory. Terraform will automatically load these values.
 
 Example terraform.tfvars format:
+```
 # --- Hyper-V WinRM Connection ---
 hyperv_host     = "10.0.0.9"
 hyperv_user     = "maximus"
@@ -49,6 +50,7 @@ iso_path_windows = "C:\\TF_ISOs"
 
 # --- Credentials ---
 ssh_pub_key_path = "/home/maxim/.ssh/id_ed25519.pub"
+```
 
 ## 🚀 Execution Steps
 

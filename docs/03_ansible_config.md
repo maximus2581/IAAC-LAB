@@ -63,4 +63,3 @@ Install CCI and deploy the SAM4H integration platform.
 ## 📂 Result
 Once the playbooks complete with zero failed tasks, your Hitachi Vantara Lab is fully operational.
 You can now access the SAM4H web interface and begin integrating it with your freshly provisioned storage emulators.
----
