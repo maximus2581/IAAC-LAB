@@ -1,0 +1,15 @@
+---
+- name: Initial Server Provisioning
+  hosts: all
+  become: true
+  tasks:
+    - name: Set correct hostname based on Terraform inventory
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Ensure hostname is in /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ inventory_hostname }}"
+        state: present

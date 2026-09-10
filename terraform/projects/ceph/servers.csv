@@ -1,0 +1,5 @@
+server_name,ip_address,subnet_prefix,default_gw,dns_server,role,cpu,ram_mb,osd_disk_gb
+ceph-node-1,192.168.100.103,24,192.168.100.1,8.8.8.8,ceph_node,4,8192,50
+ceph-node-2,192.168.100.104,24,192.168.100.1,8.8.8.8,ceph_node,4,8192,50
+ceph-node-3,192.168.100.105,24,192.168.100.1,8.8.8.8,ceph_node,4,8192,50
+
