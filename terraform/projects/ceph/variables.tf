@@ -3,7 +3,7 @@
 # ======================================================================
 variable "hyperv_host" {
   type        = string
-  description = "IP address of the Windows Hyper-V host"
+  description = "IP address or hostname of the Windows Hyper-V host"
 }
 
 variable "hyperv_user" {
@@ -53,3 +53,4 @@ variable "iso_path_windows" {
   description = "Windows path to the Cloud-Init ISOs (must map to iso_path_wsl)"
   default     = "C:\\TF_ISOs"
 }
+

@@ -15,7 +15,6 @@ terraform {
   }
 }
 
-# Hyper-V connection settings (WSL to Windows Host)
 provider "hyperv" {
   user     = var.hyperv_user
   password = var.hyperv_password
@@ -24,3 +23,4 @@ provider "hyperv" {
   https    = false
   insecure = true
 }
+

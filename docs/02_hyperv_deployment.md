@@ -1,80 +1,118 @@
 # Phase 2: Infrastructure Provisioning (Hyper-V & Terraform)
 
-In this phase, we deploy the lab topology (SAM4H server and Storage Emulators) on Microsoft Hyper-V. Instead of creating full, heavy clones of the OS, we use **Terraform** to provision **Differencing VHDX Disks** linked to our Phase 1 Golden Image. 
+In this phase, we provision virtual machines on Microsoft Hyper-V using **Terraform**. To maximize reusability, eliminate state drift, and isolate failure domains, the infrastructure is structured as a **Multi-Project Architecture** backed by a shared Terraform module.
 
-This approach provisions the entire lab in seconds and saves dozens of gigabytes of disk space. Operating system configuration (IPs, Hostnames, SSH Keys) is injected dynamically via **Cloud-Init (NoCloud ISOs)**.
+---
 
-## 🛠 Under the Hood: The Provisioning Flow
-1. Terraform reads the target topology from the `servers.csv` file.
-2. It creates lightweight Differencing Disks linked to the master Golden Image.
-3. It dynamically generates Cloud-Init configuration files (`network-config`, `user-data`, `meta-data`) and packs them into temporary ISO files using local WSL commands.
-4. The Hyper-V provider spins up Generation 2 VMs, attaching both the OS disk and the configuration ISO.
-5. Upon successful creation, Terraform automatically renders the `inventory.ini` file for the next Ansible phase.
+## 🏗 Directory Architecture
 
-## 📋 Prerequisites
-* **Terraform** installed on your system.
-* **WSL (Windows Subsystem for Linux)** with `genisoimage` installed (required for local-exec ISO generation).
-* A successfully built Golden Image from Phase 1.
-* A configured Hyper-V Virtual Switch (default: `LabSwitch`).
-
-## ⚙️ Configuration
-
-### 1. Topology Definition (`servers.csv`)
-Define your required virtual machines in the CSV file located in the `terraform/` directory.
-```csv
-server_name,ip_address,subnet_prefix,default_gw,dns_server,role,cpu,ram_mb
-sam4h-srv,192.168.100.100,24,192.168.100.1,8.8.8.8,sam4h,4,8192
-emu-stor-01,192.168.100.101,24,192.168.100.1,8.8.8.8,storage_emulator,2,4096
+```
+terraform/
+├── modules/
+│   └── hyperv_vm/             # Reusable Hyper-V VM Module
+│       ├── main.tf            # VHDX creation, Cloud-Init ISOs, VM instance
+│       ├── variables.tf       # Input contract (resources, network, extra_disks)
+│       ├── outputs.tf         # VM name, IP, disk paths
+│       ├── providers.tf       # taliesins/hyperv required provider declaration
+│       └── network_config.tftpl
+└── projects/
+    ├── ceph/                  # Ceph Storage Cluster Project
+    │   ├── main.tf            # Instantiates module with 50GB OSD extra disks
+    │   ├── servers.csv        # Ceph node specifications & disk sizes
+    │   ├── ansible_inventory.tftpl
+    │   ├── providers.tf
+    │   ├── variables.tf
+    │   └── terraform.tfvars
+    └── hitachi-lab/           # Hitachi Vantara Lab Project (Standby)
+        ├── main.tf            # SAM4H and Storage Emulators
+        ├── servers.csv
+        ├── ansible_inventory.tftpl
+        ├── providers.tf
+        ├── variables.tf
+        └── terraform.tfvars
 ```
 
-### 2. Environment Variables (terraform.tfvars)
-> ⚠️ CRITICAL: Never commit real passwords to version control.
-Create a file named terraform.tfvars in the root of your terraform/ directory. Terraform will automatically load these values.
+### Why a Multi-Project Structure?
+1. **Zero Blast Radius**: Destroying, updating, or modifying the Ceph cluster has zero chance of altering or breaking the Hitachi lab (and vice-versa).
+2. **Independent State Files**: Each project maintains its own isolated `terraform.tfstate`.
+3. **Reusable Logic**: VM specifications, differencing disks, dynamic secondary disks, Cloud-Init rendering, and lifecycle policies are defined once in `modules/hyperv_vm` and inherited by all projects.
 
-Example terraform.tfvars format:
-```
+---
+
+## 🛠 The Reusable `hyperv_vm` Module
+
+The module (`terraform/modules/hyperv_vm`) encapsulates:
+* **Differencing Disks**: Attaches a lightweight differencing VHDX linked to the base Golden Image on SCSI controller 0, location 0.
+* **Dynamic Extra Disks**: Accepts an `extra_disks` parameter (`location`, `size_gb`) to create and attach raw dynamic VHDX disks (used by Ceph nodes on SCSI location 2 for OSD storage).
+* **Cloud-Init (NoCloud ISO)**: Injects static IP, default gateway, DNS, hostname, and Ed25519 SSH keys into a bootable ISO attached on SCSI controller 0, location 1.
+* **Hyper-V Tuning**: Uses `generation = 2`, `enable_secure_boot = "Off"`, `resource_pool_name = "Primordial"` for clean attach/detach, and `lifecycle` ignore rules to protect runtime states.
+
+---
+
+## ⚙️ Project Configuration (`terraform.tfvars`)
+
+Each project contains its own `terraform.tfvars`:
+
+```hcl
 # --- Hyper-V WinRM Connection ---
-hyperv_host     = "10.0.0.9"
+# Use 127.0.0.1 in WSL mirrored networking mode
+hyperv_host     = "127.0.0.1"
 hyperv_user     = "maximus"
-hyperv_password = "YourSuperSecretPasswordHere!"
+hyperv_password = "YourSecretPassword"
 
 # --- Infrastructure Paths ---
 base_image_path      = "C:\\Users\\maxim\\Documents\\Lab\\VM\\template\\OL9_5-template\\Virtual Hard Disks\\packer-ol9-build.vhdx"
 vms_destination_path = "C:\\Users\\maxim\\Documents\\Lab\\VM\\Virtual Hard Disks"
 
-# --- WSL / Windows Path Mapping for Cloud-Init ---
-# The WSL path where the genisoimage command will save the ISO
+# --- Cloud-Init Paths ---
 iso_path_wsl     = "/mnt/c/TF_ISOs"
-# The exact same directory, but formatted for Windows Hyper-V to mount
 iso_path_windows = "C:\\TF_ISOs"
-
-# --- Credentials ---
 ssh_pub_key_path = "/home/maxim/.ssh/id_ed25519.pub"
 ```
 
-## 🚀 Execution Steps
+---
 
-### 1. Open your WSL terminal and navigate to the Terraform directory:
+## 🚀 Deploying the Ceph Cluster
+
+### 1. Navigate to the Ceph Project
+Open your WSL terminal:
 ```bash
-cd terraform/
+cd terraform/projects/ceph
 ```
 
-### 2. Initialize the working directory (downloads the Hyper-V provider):
+### 2. Initialize Providers and Modules
 ```bash
 terraform init
 ```
 
-### 3. Review the execution plan to ensure paths and resources are correct:
+### 3. Review Plan
+> ⚠️ **Important**: Due to WinRM connection pooling limits in the Hyper-V provider, always specify `-parallelism=1` to prevent concurrent WinRM request locks.
 ```bash
-terraform plan
+terraform plan -parallelism=1
 ```
 
-### 4. Apply the configuration to provision the infrastructure:
+### 4. Apply Configuration
 ```bash
-terraform apply -auto-approve
+terraform apply -parallelism=1 -auto-approve
 ```
 
-## 📂 Result
-Once the apply is complete, your Hyper-V manager will display the running VMs. They will automatically configure their network interfaces and accept SSH connections using your injected Ed25519 key.
+---
 
-Terraform will also generate the inventory.ini file in the ansible/ folder, meaning you are fully ready to proceed to Phase 3!
+## 🚀 Deploying the Hitachi Lab (On-Demand)
+
+To provision the SAM4H server and Storage Emulators:
+```bash
+cd terraform/projects/hitachi-lab
+terraform init
+terraform apply -parallelism=1 -auto-approve
+```
+
+---
+
+## 📂 Output Artifacts
+
+Upon completion of `terraform apply`, Terraform automatically generates the corresponding inventory file in `ansible/inventories/`:
+* `ansible/inventories/ceph.ini` (for Ceph nodes)
+* `ansible/inventories/hitachi.ini` (for Hitachi nodes)
+
+Each VM boots in ~15–30 seconds, acquires its static IP, and is immediately accessible over SSH via your injected private key (`~/.ssh/id_ed25519`).
