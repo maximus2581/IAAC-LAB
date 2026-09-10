@@ -6,6 +6,15 @@ It supports multiple isolated project topologies—including a **Ceph Storage Cl
 
 ---
 
+## 📜 Project Evolution & Architecture Milestones
+
+To see how this infrastructure evolved from a basic setup to an enterprise-grade modular architecture, you can browse the corresponding milestone branches:
+
+* [**v1.0 (Monolithic Architecture)**](https://github.com/maximus2581/IAAC-LAB/tree/v1-monolithic) — Initial proof-of-concept: single-state `main.tf`, flat `servers.csv`, and shared `inventory.ini`.
+* [**v2.0 (Modular Multi-Project Architecture)**](https://github.com/maximus2581/IAAC-LAB/tree/main) — Production-ready refactor: reusable Hyper-V module (`modules/hyperv_vm`), decoupled clusters (`projects/ceph` with raw OSD disks, `projects/hitachi-lab`), isolated blast radius, independent state management, and organized Ansible directories.
+
+---
+
 ## ⚠️ Security Context: Lab Environment Provisioning
 This repository is explicitly designed for provisioning isolated **Lab and Testing Environments**. 
 To ensure a seamless, out-of-the-box deployment of the lab topology without manual credential management, **default passwords and non-production SSH keys are intentionally committed to this repository** (e.g., inside `lab_config.pkrvars.hcl` and `terraform.tfvars`). 
